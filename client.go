@@ -151,21 +151,14 @@ func main() {
 				objectPropertiesCache[context] = properties
 			}
 
-			var filteredProps []ObjectProperty
 			for _, property := range properties {
-				if strings.HasPrefix(property.Name, filter) {
-					filteredProps = append(filteredProps, property)
-				}
-			}
-
-			for _, property := range filteredProps {
 				suggestions = append(suggestions, prompt.Suggest{
 					Text:        property.Name,
 					Description: property.JsType,
 				})
 			}
 
-			return suggestions
+			return prompt.FilterContains(suggestions, filter, true)
 		},
 		prompt.OptionCompletionWordSeparator(allSeperators),
 		prompt.OptionLivePrefix(func() (prefix string, useLivePrefix bool) {
