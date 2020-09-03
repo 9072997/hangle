@@ -74,7 +74,7 @@ func main() {
 	var historyFile *os.File
 	// fail silently if we couldn't open a history file
 	if homeDir != "" {
-		historyPath := filepath.Join(homeDir, ".gas_history")
+		historyPath := filepath.Join(homeDir, ".hangle_history")
 		// get previous entries from history file
 		historyContents, err := ioutil.ReadFile(historyPath)
 		// errors are fine since we will get an empty string
