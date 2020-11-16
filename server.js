@@ -7,6 +7,17 @@ function repl(__tunnelURL) {
       }));
   }
   
+  function log(msg) {
+    UrlFetchApp.fetch(
+      __tunnelURL,
+      {
+        'method': 'post',
+        'contentType': 'text/plain',
+        'payload': '__LOG ' + msg
+      }
+    );
+  }
+  
   let __value = '__READY';
   do {
     Logger.log(`${__value}`);

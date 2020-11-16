@@ -30,6 +30,27 @@ type ObjectProperty struct {
 var chainSeperators = `!@#$%^&*()_+-={}|\:;<>?,/~`
 var allSeperators = `!@#$%^&*()_+-={}|[]\:";'<>?,./~` + "`"
 
+// match lines that end in >>>somefile
+// "somefile" will be in capture group 2, 3, or 4
+// the command will be in captire group 1
+var fileRedirectRegex = regexp.MustCompile(
+	`^(.*)>>>(?:([a-zA-Z0-9./\\:-_]+)|'([a-zA-Z0-9./\\:-_ ]+)'|"([a-zA-Z0-9./\\:-_ ']+)")$`,
+)
+
+// given a command line including an out file, split the command and file
+func splitOutputFile(line string) (command, file string) {
+	matchParts := fileRedirectRegex.FindStringSubmatch(line)
+	if len(matchParts[2]) > 0 {
+		return matchParts[1], matchParts[2]
+	} else if len(matchParts[3]) > 0 {
+		return matchParts[1], matchParts[3]
+	} else if len(matchParts[4]) > 0 {
+		return matchParts[1], matchParts[4]
+	} else {
+		panic("Could not find output file name")
+	}
+}
+
 func main() {
 	toAppsScript := make(chan string)
 	fromAppsScript := make(chan string)
@@ -43,7 +64,15 @@ func main() {
 		reqBody, err := ioutil.ReadAll(req.Body)
 		jgh.PanicOnErr(err)
 
-		if string(reqBody) != "__KEEPALIVE" {
+		if string(reqBody) == "__KEEPALIVE" {
+			// this is a noop
+		} else if strings.HasPrefix(string(reqBody), "__LOG ") {
+			// print everything except prefix
+			fmt.Println(string(reqBody[6:]))
+			// don't send annother command. We are still working.
+			return
+		} else {
+			// this is the result of an expression
 			fromAppsScript <- string(reqBody)
 		}
 
@@ -103,11 +132,11 @@ func main() {
 	objectPropertiesCache := make(map[string][]ObjectProperty)
 
 	prompt.New(
-		func(command string) {
+		func(line string) {
 			// write to history (ignore errors)
-			historyFile.WriteString(command + "\n")
+			historyFile.WriteString(line + "\n")
 
-			if command == "exit" {
+			if line == "exit" {
 				// this will block until read by the server thread
 				toAppsScript <- "__DISCONNECT"
 
@@ -122,10 +151,19 @@ func main() {
 				historyFile.Close()
 
 				os.Exit(0)
+			} else if fileRedirectRegex.MatchString(line) {
+				command, outputFile := splitOutputFile(line)
+				response := remoteCommand(command) + "\n"
+				err := ioutil.WriteFile(outputFile, []byte(response), 0644)
+				if err != nil {
+					// just inform the user of the error
+					fmt.Println(err)
+				}
+				fmt.Println("Wrote output to file", outputFile)
+			} else {
+				response := remoteCommand(line)
+				fmt.Println(response)
 			}
-
-			response := remoteCommand(command)
-			fmt.Println(response)
 
 			// remote state changed, so clear cache of object properties
 			objectPropertiesCache = make(map[string][]ObjectProperty)
