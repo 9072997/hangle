@@ -16,6 +16,7 @@ function repl(__tunnelURL) {
         'payload': '__LOG ' + msg
       }
     );
+    Logger.log(`: ${msg}`);
   }
   
   let __value = '__READY';
