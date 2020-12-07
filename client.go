@@ -34,7 +34,7 @@ var allSeperators = `!@#$%^&*()_+-={}|[]\:";'<>?,./~` + "`"
 // "somefile" will be in capture group 2, 3, or 4
 // the command will be in captire group 1
 var fileRedirectRegex = regexp.MustCompile(
-	`^(.*)>>>(?:([a-zA-Z0-9./\\:-_]+)|'([a-zA-Z0-9./\\:-_ ]+)'|"([a-zA-Z0-9./\\:-_ ']+)")$`,
+	`^(.*)>>>(?:([a-zA-Z0-9./\\:_-]+)|'([a-zA-Z0-9./\\:_ -]+)'|"([a-zA-Z0-9./\\:_ '-]+)")$`,
 )
 
 // given a command line including an out file, split the command and file
