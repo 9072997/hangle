@@ -13,6 +13,9 @@ function repl(__tunnelURL) {
       {
         'method': 'post',
         'contentType': 'text/plain',
+        'headers': {
+          'X-Pinggy-No-Screen': 'true'
+        },
         'payload': '__LOG ' + msg
       }
     );
@@ -28,6 +31,9 @@ function repl(__tunnelURL) {
       {
         'method': 'post',
         'contentType': 'text/plain',
+        'headers': {
+          'X-Pinggy-No-Screen': 'true'
+        },
         'payload': __value
       }
     ).getContentText();

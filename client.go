@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
+	"net"
 	"net/http"
 	"os"
 	"os/user"
@@ -14,6 +16,7 @@ import (
 	"time"
 
 	"github.com/9072997/jgh"
+	"github.com/Pinggy-io/pinggy-go/pinggy"
 	"github.com/c-bata/go-prompt"
 )
 
@@ -61,7 +64,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(resp http.ResponseWriter, req *http.Request) {
-		reqBody, err := ioutil.ReadAll(req.Body)
+		reqBody, err := io.ReadAll(req.Body)
 		jgh.PanicOnErr(err)
 
 		if string(reqBody) == "__KEEPALIVE" {
@@ -85,12 +88,33 @@ func main() {
 
 	})
 
-	srv := http.Server{
-		Addr:    ":80",
-		Handler: mux,
+	// check if --pinggy flag is present
+	var pinggyEnabled bool
+	flag.BoolVar(&pinggyEnabled, "pinggy", false, "Enable pinggy tunneling")
+	flag.Parse()
+
+	var l net.Listener
+	if pinggyEnabled {
+		p, err := pinggy.Connect(pinggy.HTTP)
+		if err != nil {
+			panic(err)
+		}
+		for _, url := range p.RemoteUrls() {
+			fmt.Println("Endpoint:", url)
+		}
+		p.InitiateWebDebug("localhost:6060")
+		fmt.Println("Debug endpoint: http://localhost:6060")
+		l = p
+	} else {
+		var err error
+		l, err = net.Listen("tcp", ":80")
+		if err != nil {
+			panic(err)
+		}
 	}
+	srv := http.Server{Handler: mux}
 	go func() {
-		err := srv.ListenAndServe()
+		err := srv.Serve(l)
 		if err != http.ErrServerClosed {
 			panic(err)
 		}
@@ -105,7 +129,7 @@ func main() {
 	if homeDir != "" {
 		historyPath := filepath.Join(homeDir, ".hangle_history")
 		// get previous entries from history file
-		historyContents, err := ioutil.ReadFile(historyPath)
+		historyContents, err := os.ReadFile(historyPath)
 		// errors are fine since we will get an empty string
 		if err != nil {
 			fmt.Println(err)
@@ -123,7 +147,7 @@ func main() {
 	}
 
 	// wait for "__READY" from server
-	fmt.Println("Waiting for connection on port 80")
+	fmt.Println("Waiting for connection")
 	<-fromAppsScript
 	scriptEndTime := time.Now().Add(appsScriptMaxExecutionTime)
 
@@ -154,7 +178,7 @@ func main() {
 			} else if fileRedirectRegex.MatchString(line) {
 				command, outputFile := splitOutputFile(line)
 				response := remoteCommand(command) + "\n"
-				err := ioutil.WriteFile(outputFile, []byte(response), 0644)
+				err := os.WriteFile(outputFile, []byte(response), 0644)
 				if err != nil {
 					// just inform the user of the error
 					fmt.Println(err)
@@ -200,7 +224,7 @@ func main() {
 		},
 		prompt.OptionCompletionWordSeparator(allSeperators),
 		prompt.OptionLivePrefix(func() (prefix string, useLivePrefix bool) {
-			remaining := scriptEndTime.Sub(time.Now())
+			remaining := time.Until(scriptEndTime)
 			prefix = formatDuration(remaining) + "> "
 			useLivePrefix = remaining > 0
 			return
