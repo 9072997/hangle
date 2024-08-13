@@ -29,13 +29,13 @@ type ObjectProperty struct {
 	JsType string `json:"type"`
 }
 
-// seperator characters
+// separator characters
 var chainSeperators = `!@#$%^&*()_+-={}|\:;<>?,/~`
 var allSeperators = `!@#$%^&*()_+-={}|[]\:";'<>?,./~` + "`"
 
 // match lines that end in >>>somefile
 // "somefile" will be in capture group 2, 3, or 4
-// the command will be in captire group 1
+// the command will be in capture group 1
 var fileRedirectRegex = regexp.MustCompile(
 	`^(.*)>>>(?:([a-zA-Z0-9./\\:_-]+)|'([a-zA-Z0-9./\\:_ -]+)'|"([a-zA-Z0-9./\\:_ '-]+)")$`,
 )
@@ -72,7 +72,7 @@ func main() {
 		} else if strings.HasPrefix(string(reqBody), "__LOG ") {
 			// print everything except prefix
 			fmt.Println(string(reqBody[6:]))
-			// don't send annother command. We are still working.
+			// don't send another command. We are still working.
 			return
 		} else {
 			// this is the result of an expression
